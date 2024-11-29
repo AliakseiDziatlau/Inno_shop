@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using UserControl.Application.Commands.AuthsControllerCommands;
 
@@ -131,6 +132,78 @@ public class RequestPasswordResetTests : AuthsControllerTestsBase
 
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.Equal("Password reset link sent to your email.", okResult.Value);
+
+        MediatorMock.Verify(m => m.Send(It.Is<RequestPasswordResetCommand>(c => c.Email == command.Email), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task RequestPasswordReset_ThrowsException_WhenTooManyRequestsMade()
+    {
+        var command = new RequestPasswordResetCommand
+        {
+            Email = "testuser@example.com"
+        };
+
+        MediatorMock.Setup(m => m.Send(command, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("Too many requests. Please wait and try again."));
+
+        var exception = await Assert.ThrowsAsync<Exception>(() => Controller.RequestPasswordReset(command));
+
+        Assert.Equal("Too many requests. Please wait and try again.", exception.Message);
+
+        MediatorMock.Verify(m => m.Send(It.Is<RequestPasswordResetCommand>(c => c.Email == command.Email), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task RequestPasswordReset_ReturnsInternalServerError_WhenUnhandledExceptionOccurs()
+    {
+        var command = new RequestPasswordResetCommand
+        {
+            Email = "testuser@example.com"
+        };
+
+        MediatorMock.Setup(m => m.Send(command, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("Unknown server error."));
+
+        var exception = await Assert.ThrowsAsync<Exception>(() => Controller.RequestPasswordReset(command));
+
+        Assert.Equal("Unknown server error.", exception.Message);
+
+        MediatorMock.Verify(m => m.Send(It.Is<RequestPasswordResetCommand>(c => c.Email == command.Email), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task RequestPasswordReset_ThrowsDbUpdateException_WhenDatabaseIsUnavailable()
+    {
+        var command = new RequestPasswordResetCommand
+        {
+            Email = "testuser@example.com"
+        };
+
+        MediatorMock.Setup(m => m.Send(command, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateException("Database is unavailable."));
+
+        var exception = await Assert.ThrowsAsync<DbUpdateException>(() => Controller.RequestPasswordReset(command));
+
+        Assert.Equal("Database is unavailable.", exception.Message);
+
+        MediatorMock.Verify(m => m.Send(It.Is<RequestPasswordResetCommand>(c => c.Email == command.Email), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task RequestPasswordReset_ThrowsArgumentException_WhenEmailIsTooLong()
+    {
+        var command = new RequestPasswordResetCommand
+        {
+            Email = new string('a', 256) + "@example.com"
+        };
+
+        MediatorMock.Setup(m => m.Send(command, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ArgumentException("Email exceeds maximum length."));
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => Controller.RequestPasswordReset(command));
+
+        Assert.Equal("Email exceeds maximum length.", exception.Message);
 
         MediatorMock.Verify(m => m.Send(It.Is<RequestPasswordResetCommand>(c => c.Email == command.Email), It.IsAny<CancellationToken>()), Times.Once);
     }

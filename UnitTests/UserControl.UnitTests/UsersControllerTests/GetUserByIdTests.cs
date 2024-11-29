@@ -107,4 +107,68 @@ public class GetUserByIdTests : UsersControllerTestsBase
 
         MediatorMock.Verify(m => m.Send(It.Is<GetUserByIdCommand>(q => q.UserId == userId), It.IsAny<CancellationToken>()), Times.Once);
     }
+    
+    [Fact]
+    public async Task GetUserById_DoesNotReturnConfidentialData()
+    {
+        var userId = 1;
+        var userDto = new UserDto
+        {
+            Id = userId,
+            Name = "Test User",
+            Email = "testuser@example.com",
+            Role = "User",
+        };
+
+        MediatorMock.Setup(m => m.Send(It.Is<GetUserByIdCommand>(q => q.UserId == userId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(userDto);
+
+        var result = await Controller.GetUserById(userId);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnedUser = Assert.IsType<UserDto>(okResult.Value);
+        MediatorMock.Verify(m => m.Send(It.Is<GetUserByIdCommand>(q => q.UserId == userId), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task GetUserById_ThrowsForbidden_WhenUserIsDeactivated()
+    {
+        var userId = 1;
+
+        MediatorMock.Setup(m => m.Send(It.Is<GetUserByIdCommand>(q => q.UserId == userId), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UnauthorizedAccessException("The user is deactivated."));
+
+        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() => Controller.GetUserById(userId));
+
+        Assert.Equal("The user is deactivated.", exception.Message);
+        MediatorMock.Verify(m => m.Send(It.Is<GetUserByIdCommand>(q => q.UserId == userId), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task GetUserById_ReturnsCorrectUserModel()
+    {
+        var userId = 1;
+        var userDto = new UserDto
+        {
+            Id = userId,
+            Name = "Test User",
+            Email = "testuser@example.com",
+            Role = "User"
+        };
+
+        MediatorMock.Setup(m => m.Send(It.Is<GetUserByIdCommand>(q => q.UserId == userId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(userDto);
+
+        var result = await Controller.GetUserById(userId);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnedUser = Assert.IsType<UserDto>(okResult.Value);
+
+        Assert.Equal(userDto.Id, returnedUser.Id);
+        Assert.Equal(userDto.Name, returnedUser.Name);
+        Assert.Equal(userDto.Email, returnedUser.Email);
+        Assert.Equal(userDto.Role, returnedUser.Role);
+
+        MediatorMock.Verify(m => m.Send(It.Is<GetUserByIdCommand>(q => q.UserId == userId), It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

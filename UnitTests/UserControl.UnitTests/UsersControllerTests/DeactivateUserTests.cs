@@ -121,4 +121,58 @@ public class DeactivateUserTests : UsersControllerTestsBase
         Assert.Equal("User is already deactivated.", exception.Message);
         MediatorMock.Verify(m => m.Send(It.Is<DeactivateUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()), Times.Once);
     }
+    
+    [Fact]
+    public async Task DeactivateUser_ThrowsUnauthorizedAccessException_WhenUserIsNotAdmin()
+    {
+        var userId = 1;
+
+        MediatorMock.Setup(m => m.Send(It.Is<DeactivateUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UnauthorizedAccessException("Only admins can deactivate users."));
+
+        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() => Controller.DeactivateUser(userId));
+
+        Assert.Equal("Only admins can deactivate users.", exception.Message);
+        MediatorMock.Verify(m => m.Send(It.Is<DeactivateUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task DeactivateUser_Fails_AfterMaximumRetryAttempts()
+    {
+        var userId = 1;
+
+        MediatorMock.Setup(m => m.Send(It.Is<DeactivateUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TimeoutException("Temporary error."));
+
+        await Assert.ThrowsAsync<TimeoutException>(() => Controller.DeactivateUser(userId));
+
+        MediatorMock.Verify(m => m.Send(It.Is<DeactivateUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()), Times.Exactly(1));
+    }
+    
+    [Fact]
+    public async Task DeactivateUser_DoesNotChangeState_WhenDatabaseErrorOccurs()
+    {
+        var userId = 1;
+
+        MediatorMock.Setup(m => m.Send(It.Is<DeactivateUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateException("Database error occurred."));
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => Controller.DeactivateUser(userId));
+
+        MediatorMock.Verify(m => m.Send(It.Is<DeactivateUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task DeactivateUser_ThrowsInvalidOperationException_WhenUserTriesToDeactivateSelf()
+    {
+        var userId = 1;
+
+        MediatorMock.Setup(m => m.Send(It.Is<DeactivateUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("You cannot deactivate your own account."));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => Controller.DeactivateUser(userId));
+
+        Assert.Equal("You cannot deactivate your own account.", exception.Message);
+        MediatorMock.Verify(m => m.Send(It.Is<DeactivateUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

@@ -174,4 +174,86 @@ public class RegisterTests : AuthsControllerTestsBase
         Assert.Equal("Invalid role specified.", exception.Message);
         MediatorMock.Verify(m => m.Send(command, It.IsAny<CancellationToken>()), Times.Once);
     }
+    
+    [Fact]
+    public async Task Register_ThrowsArgumentException_WhenNameIsTooLong()
+    {
+        var command = new RegisterCommand
+        {
+            Name = new string('A', 101),
+            Email = "johndoe@example.com",
+            Password = "SecurePassword123",
+            Role = "User"
+        };
+
+        MediatorMock.Setup(m => m.Send(command, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ArgumentException("Name must not exceed 100 characters."));
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => Controller.Register(command));
+
+        Assert.Equal("Name must not exceed 100 characters.", exception.Message);
+        MediatorMock.Verify(m => m.Send(command, It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task Register_ThrowsArgumentException_WhenEmailIsAlreadyRegistered()
+    {
+        var command = new RegisterCommand
+        {
+            Name = "Jane Doe",
+            Email = "duplicate@example.com",
+            Password = "SecurePassword123",
+            Role = "User"
+        };
+
+        MediatorMock.Setup(m => m.Send(command, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ArgumentException("A user with this email already exists."));
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => Controller.Register(command));
+
+        Assert.Equal("A user with this email already exists.", exception.Message);
+        MediatorMock.Verify(m => m.Send(command, It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task Register_ReturnsOkResult_WhenAdminRegistersSuccessfully()
+    {
+        var command = new RegisterCommand
+        {
+            Name = "Admin User",
+            Email = "admin@example.com",
+            Password = "SecureAdminPassword123",
+            Role = "Admin"
+        };
+
+        MediatorMock.Setup(m => m.Send(command, It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult(Unit.Value));
+
+        var result = await Controller.Register(command);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal("Registration successful! Please check your email to confirm your account.", okResult.Value);
+
+        MediatorMock.Verify(m => m.Send(command, It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task Register_ThrowsArgumentException_WhenPasswordIsTooWeak()
+    {
+        var command = new RegisterCommand
+        {
+            Name = "Weak Password User",
+            Email = "weakpassword@example.com",
+            Password = "123", 
+            Role = "User"
+        };
+
+        MediatorMock.Setup(m => m.Send(command, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ArgumentException("Password must meet security requirements."));
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => Controller.Register(command));
+
+        Assert.Equal("Password must meet security requirements.", exception.Message);
+        MediatorMock.Verify(m => m.Send(command, It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

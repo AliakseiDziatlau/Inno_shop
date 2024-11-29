@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using ProductControl.Application.Commands;
@@ -114,5 +115,72 @@ public class ToggleUserProductsTests : ProductsControllerTestsBase
         await Controller.ToggleUserProducts(userId, isActive);
         
         MediatorMock.Verify(m => m.Send(It.Is<ToggleUserProductsCommand>(c => c.UserId == userId && c.IsActive == isActive), It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+    
+    [Fact]
+    public async Task ToggleUserProducts_ReturnsNoContent_WhenUserHasNoProducts()
+    {
+        var userId = 1;
+        var isActive = false;
+
+        MediatorMock.Setup(m => m.Send(It.Is<ToggleUserProductsCommand>(c => c.UserId == userId && c.IsActive == isActive), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Unit.Value);
+
+        var result = await Controller.ToggleUserProducts(userId, isActive);
+
+        Assert.NotNull(result);
+        Assert.IsType<NoContentResult>(result);
+
+        MediatorMock.Verify(m => m.Send(It.Is<ToggleUserProductsCommand>(c => c.UserId == userId && c.IsActive == isActive), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task ToggleUserProducts_ThrowsPartialFailureException_WhenSomeProductsCannotBeUpdated()
+    {
+        var userId = 1;
+        var isActive = true;
+
+        MediatorMock.Setup(m => m.Send(It.Is<ToggleUserProductsCommand>(c => c.UserId == userId && c.IsActive == isActive), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Some products could not be updated."));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => Controller.ToggleUserProducts(userId, isActive));
+        Assert.Equal("Some products could not be updated.", exception.Message);
+
+        MediatorMock.Verify(m => m.Send(It.Is<ToggleUserProductsCommand>(c => c.UserId == userId && c.IsActive == isActive), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task ToggleUserProducts_ThrowsUnauthorizedAccessException_WhenUserIsNotAuthenticated()
+    {
+        var userId = 1;
+        var isActive = true;
+
+        Controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext()
+        }; 
+
+        MediatorMock.Setup(m => m.Send(It.IsAny<ToggleUserProductsCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UnauthorizedAccessException("User is not authenticated."));
+
+        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() => Controller.ToggleUserProducts(userId, isActive));
+
+        Assert.Equal("User is not authenticated.", exception.Message);
+
+        MediatorMock.Verify(m => m.Send(It.IsAny<ToggleUserProductsCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task ToggleUserProducts_DoesNotChangeState_WhenProductsAlreadyMatchIsActive()
+    {
+        var userId = 1;
+        var isActive = true;
+
+        MediatorMock.Setup(m => m.Send(It.Is<ToggleUserProductsCommand>(c => c.UserId == userId && c.IsActive == isActive), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Unit.Value);
+
+        await Controller.ToggleUserProducts(userId, isActive);
+
+        MediatorMock.Verify(m => m.Send(It.Is<ToggleUserProductsCommand>(c => c.UserId == userId && c.IsActive == isActive), It.IsAny<CancellationToken>()), Times.Once);
     }
 }

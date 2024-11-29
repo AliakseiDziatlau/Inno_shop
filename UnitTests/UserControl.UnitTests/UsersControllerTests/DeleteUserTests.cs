@@ -114,4 +114,47 @@ public class DeleteUserTests : UsersControllerTestsBase
         Assert.True(stopwatch.ElapsedMilliseconds < 1000, "Method took too long to execute.");
         MediatorMock.Verify(m => m.Send(It.Is<DeleteUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()), Times.Once);
     }
+    
+    [Fact]
+    public async Task DeleteUser_ThrowsInvalidOperationException_WhenUserTriesToDeleteSelf()
+    {
+        var selfUserId = 1;
+
+        MediatorMock.Setup(m => m.Send(It.Is<DeleteUserCommand>(c => c.UserId == selfUserId), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("You cannot delete your own account."));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => Controller.DeleteUser(selfUserId));
+
+        Assert.Equal("You cannot delete your own account.", exception.Message);
+
+        MediatorMock.Verify(m => m.Send(It.Is<DeleteUserCommand>(c => c.UserId == selfUserId), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task DeleteUser_ThrowsUnauthorizedAccessException_WhenUserIsNotAdmin()
+    {
+        var userId = 2;
+
+        MediatorMock.Setup(m => m.Send(It.Is<DeleteUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UnauthorizedAccessException("Only admins can delete users."));
+
+        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() => Controller.DeleteUser(userId));
+
+        Assert.Equal("Only admins can delete users.", exception.Message);
+
+        MediatorMock.Verify(m => m.Send(It.Is<DeleteUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task DeleteUser_DoesNotChangeState_WhenDatabaseErrorOccurs()
+    {
+        var userId = 1;
+
+        MediatorMock.Setup(m => m.Send(It.Is<DeleteUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateException("Database error occurred."));
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => Controller.DeleteUser(userId));
+
+        MediatorMock.Verify(m => m.Send(It.Is<DeleteUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

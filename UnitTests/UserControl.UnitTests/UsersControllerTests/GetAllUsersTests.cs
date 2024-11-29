@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using UserControl.Application.Commands.UsersControllerCommands;
 using UserControl.Application.DTOs;
-
 namespace UserControlTests.UserControl.UnitTests.UsersControllerTests;
 
 public class GetAllUsersTests : UsersControllerTestsBase
@@ -147,6 +147,38 @@ public class GetAllUsersTests : UsersControllerTestsBase
         
         var returnedUsers = Assert.IsAssignableFrom<IEnumerable<UserDto>>(okResult.Value);
         Assert.Empty(returnedUsers);
+
+        MediatorMock.Verify(m => m.Send(It.Is<GetAllUsersCommand>(q => q.Page == page && q.PageSize == pageSize), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task GetAllUsers_ThrowsUnauthorizedAccessException_WhenUserIsNotAuthorized()
+    {
+        var page = 1;
+        var pageSize = 10;
+
+        MediatorMock.Setup(m => m.Send(It.Is<GetAllUsersCommand>(q => q.Page == page && q.PageSize == pageSize), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UnauthorizedAccessException("User is not authorized."));
+
+        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() => Controller.GetAllUsers(page, pageSize));
+
+        Assert.Equal("User is not authorized.", exception.Message);
+
+        MediatorMock.Verify(m => m.Send(It.Is<GetAllUsersCommand>(q => q.Page == page && q.PageSize == pageSize), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task GetAllUsers_ThrowsDbUpdateException_WhenDatabaseErrorOccurs()
+    {
+        var page = 1;
+        var pageSize = 10;
+
+        MediatorMock.Setup(m => m.Send(It.Is<GetAllUsersCommand>(q => q.Page == page && q.PageSize == pageSize), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateException("Database error occurred."));
+
+        var exception = await Assert.ThrowsAsync<DbUpdateException>(() => Controller.GetAllUsers(page, pageSize));
+
+        Assert.Equal("Database error occurred.", exception.Message);
 
         MediatorMock.Verify(m => m.Send(It.Is<GetAllUsersCommand>(q => q.Page == page && q.PageSize == pageSize), It.IsAny<CancellationToken>()), Times.Once);
     }

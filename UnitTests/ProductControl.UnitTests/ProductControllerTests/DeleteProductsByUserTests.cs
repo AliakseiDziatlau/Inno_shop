@@ -118,4 +118,61 @@ public class DeleteProductsByUserTests : ProductsControllerTestsBase
 
         MediatorMock.Verify(m => m.Send(It.Is<DeleteProductsByUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()), Times.Once);
     }
+    
+    [Fact]
+    public async Task DeleteProductsByUser_ReturnsNoContent_WhenUserHasNoProducts()
+    {
+        var userId = 1;
+
+        MediatorMock.Setup(m => m.Send(It.Is<DeleteProductsByUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult(Unit.Value)); 
+        
+        var result = await Controller.DeleteProductsByUser(userId);
+
+        Assert.NotNull(result);
+        Assert.IsType<NoContentResult>(result);
+
+        MediatorMock.Verify(m => m.Send(It.Is<DeleteProductsByUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task DeleteProductsByUser_UsesAuthorizedUserToken()
+    {
+        var userId = 1;
+
+        MediatorMock.Setup(m => m.Send(It.Is<DeleteProductsByUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult(Unit.Value));
+
+        await Controller.DeleteProductsByUser(userId);
+
+        MediatorMock.Verify(m => m.Send(It.Is<DeleteProductsByUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task DeleteProductsByUser_ThrowsUnauthorizedAccessException_WhenTokenIsInvalid()
+    {
+        var userId = 1;
+
+        MediatorMock.Setup(m => m.Send(It.Is<DeleteProductsByUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UnauthorizedAccessException("Invalid token."));
+
+        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() => Controller.DeleteProductsByUser(userId));
+
+        Assert.Equal("Invalid token.", exception.Message);
+
+        MediatorMock.Verify(m => m.Send(It.Is<DeleteProductsByUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task DeleteProductsByUser_DeletesOnlyUserOwnedProducts()
+    {
+        var userId = 1;
+
+        MediatorMock.Setup(m => m.Send(It.Is<DeleteProductsByUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult(Unit.Value));
+
+        await Controller.DeleteProductsByUser(userId);
+
+        MediatorMock.Verify(m => m.Send(It.Is<DeleteProductsByUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

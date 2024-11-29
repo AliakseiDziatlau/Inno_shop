@@ -158,4 +158,101 @@ public class CreateProductTests : ProductsControllerTestsBase
 
         MediatorMock.Verify(m => m.Send(It.Is<CreateProductCommand>(c => c.Name == command.Name), It.IsAny<CancellationToken>()), Times.Once);
     }
+    
+    [Fact]
+    public async Task CreateProduct_ReturnsCreatedAtAction_WhenProductHasMaximalValues()
+    {
+        var command = new CreateProductCommand
+        {
+            Name = new string('A', 255), 
+            Description = new string('B', 1000), 
+            Price = decimal.MaxValue,
+            IsAvailable = true,
+            User = new ClaimsPrincipal()
+        };
+
+        var createdProduct = new ProductDto
+        {
+            Id = 101,
+            Name = command.Name,
+            Description = command.Description,
+            Price = command.Price,
+            IsAvailable = command.IsAvailable
+        };
+
+        MediatorMock.Setup(m => m.Send(It.Is<CreateProductCommand>(c => c.Name == command.Name), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(createdProduct);
+
+        var result = await Controller.CreateProduct(command);
+
+        var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(result);
+        var returnedProduct = Assert.IsType<ProductDto>(createdAtActionResult.Value);
+
+        Assert.Equal(createdProduct.Id, returnedProduct.Id);
+        Assert.Equal(createdProduct.Name, returnedProduct.Name);
+        Assert.Equal(createdProduct.Description, returnedProduct.Description);
+        Assert.Equal(createdProduct.Price, returnedProduct.Price);
+        Assert.Equal(createdProduct.IsAvailable, returnedProduct.IsAvailable);
+
+        MediatorMock.Verify(m => m.Send(It.Is<CreateProductCommand>(c => c.Name == command.Name), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task CreateProduct_ThrowsValidationException_WhenDescriptionIsEmpty()
+    {
+        var command = new CreateProductCommand
+        {
+            Name = "Valid Product",
+            Description = "",
+            Price = 99.99m,
+            IsAvailable = true,
+            User = new ClaimsPrincipal()
+        };
+
+        MediatorMock.Setup(m => m.Send(It.Is<CreateProductCommand>(c => c.Description == command.Description), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ValidationException("Product description is required."));
+
+        var exception = await Assert.ThrowsAsync<ValidationException>(() => Controller.CreateProduct(command));
+        Assert.Equal("Product description is required.", exception.Message);
+
+        MediatorMock.Verify(m => m.Send(It.Is<CreateProductCommand>(c => c.Description == command.Description), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task CreateProduct_ReturnsCreatedAtAction_WhenProductHasMinimalValues()
+    {
+        var command = new CreateProductCommand
+        {
+            Name = "A", 
+            Description = "B", 
+            Price = 0.01m, 
+            IsAvailable = false,
+            User = new ClaimsPrincipal()
+        };
+
+        var createdProduct = new ProductDto
+        {
+            Id = 102,
+            Name = command.Name,
+            Description = command.Description,
+            Price = command.Price,
+            IsAvailable = command.IsAvailable
+        };
+
+        MediatorMock.Setup(m => m.Send(It.Is<CreateProductCommand>(c => c.Name == command.Name), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(createdProduct);
+
+        var result = await Controller.CreateProduct(command);
+
+        var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(result);
+        var returnedProduct = Assert.IsType<ProductDto>(createdAtActionResult.Value);
+
+        Assert.Equal(createdProduct.Id, returnedProduct.Id);
+        Assert.Equal(createdProduct.Name, returnedProduct.Name);
+        Assert.Equal(createdProduct.Description, returnedProduct.Description);
+        Assert.Equal(createdProduct.Price, returnedProduct.Price);
+        Assert.Equal(createdProduct.IsAvailable, returnedProduct.IsAvailable);
+
+        MediatorMock.Verify(m => m.Send(It.Is<CreateProductCommand>(c => c.Name == command.Name), It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

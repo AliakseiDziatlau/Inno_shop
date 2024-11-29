@@ -121,4 +121,18 @@ public class ActivateUserTests : UsersControllerTestsBase
         Assert.Equal("User is already active.", exception.Message);
         MediatorMock.Verify(m => m.Send(It.Is<ActivateUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()), Times.Once);
     }
+    
+    [Fact]
+    public async Task ActivateUser_ThrowsUnauthorizedAccessException_WhenUserIsNotAdmin()
+    {
+        var userId = 1;
+
+        MediatorMock.Setup(m => m.Send(It.Is<ActivateUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UnauthorizedAccessException("Only admins can activate users."));
+
+        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() => Controller.ActivateUser(userId));
+
+        Assert.Equal("Only admins can activate users.", exception.Message);
+        MediatorMock.Verify(m => m.Send(It.Is<ActivateUserCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

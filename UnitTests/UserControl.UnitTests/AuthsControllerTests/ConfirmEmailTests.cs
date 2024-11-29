@@ -119,4 +119,71 @@ public class ConfirmEmailTests : AuthsControllerTestsBase
 
         MediatorMock.Verify(m => m.Send(It.Is<ConfirmEmailCommand>(cmd => cmd.Token == token), It.IsAny<CancellationToken>()), Times.Once);
     }
+    
+    [Fact]
+    public async Task ConfirmEmail_ThrowsArgumentException_WhenTokenIsWhitespace()
+    {
+        var whitespaceToken = "   ";
+
+        MediatorMock
+            .Setup(m => m.Send(It.IsAny<ConfirmEmailCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ArgumentException("Confirmation token cannot be whitespace."));
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => Controller.ConfirmEmail(whitespaceToken));
+
+        Assert.Equal("Confirmation token cannot be whitespace.", exception.Message);
+
+        MediatorMock.Verify(m => m.Send(It.Is<ConfirmEmailCommand>(cmd => cmd.Token == whitespaceToken), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task ConfirmEmail_ReturnsOkResult_WhenTokenIsValidWithDifferentCase()
+    {
+        var validToken = "Valid-Token";
+        var tokenWithDifferentCase = "valid-token";
+
+        MediatorMock
+            .Setup(m => m.Send(It.Is<ConfirmEmailCommand>(cmd => cmd.Token == tokenWithDifferentCase), It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult(Unit.Value));
+
+        var result = await Controller.ConfirmEmail(tokenWithDifferentCase);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal("Your account has been confirmed successfully.", okResult.Value);
+
+        MediatorMock.Verify(m => m.Send(It.Is<ConfirmEmailCommand>(cmd => cmd.Token == tokenWithDifferentCase), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task ConfirmEmail_ThrowsArgumentException_WhenTokenExceedsMaximumLength()
+    {
+        var longToken = new string('a', 1001); 
+
+        MediatorMock
+            .Setup(m => m.Send(It.IsAny<ConfirmEmailCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ArgumentException("Confirmation token exceeds maximum length."));
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => Controller.ConfirmEmail(longToken));
+
+        Assert.Equal("Confirmation token exceeds maximum length.", exception.Message);
+
+        MediatorMock.Verify(m => m.Send(It.Is<ConfirmEmailCommand>(cmd => cmd.Token == longToken), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task ConfirmEmail_ReturnsOkResult_WhenTokenContainsSpecialCharacters()
+    {
+        var token = "valid-token-@#$%";
+
+        MediatorMock
+            .Setup(m => m.Send(It.Is<ConfirmEmailCommand>(cmd => cmd.Token == token), It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult(Unit.Value));
+
+        var result = await Controller.ConfirmEmail(token);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal("Your account has been confirmed successfully.", okResult.Value);
+
+        MediatorMock.Verify(m => m.Send(It.Is<ConfirmEmailCommand>(cmd => cmd.Token == token), It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

@@ -134,4 +134,106 @@ public class UpdateUserTests : UsersControllerTestsBase
         Assert.Equal("Name and Email are required.", exception.Message);
         MediatorMock.Verify(m => m.Send(It.IsAny<UpdateUserCommand>(), It.IsAny<CancellationToken>()), Times.Once);
     }
+    
+    [Fact]
+    public async Task UpdateUser_UpdatesRoleSuccessfully()
+    {
+        var userId = 1;
+        var updateRequest = new UpdateUserRequestDto
+        {
+            Name = "Updated Name",
+            Email = "updated@example.com",
+            Role = "Admin"
+        };
+
+        MediatorMock.Setup(m => m.Send(It.Is<UpdateUserCommand>(c =>
+                c.UserId == userId &&
+                c.Role == updateRequest.Role), It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult(Unit.Value));
+
+        var result = await Controller.UpdateUser(userId, updateRequest);
+
+        Assert.IsType<NoContentResult>(result);
+        MediatorMock.Verify(m => m.Send(It.IsAny<UpdateUserCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task UpdateUser_DoesNotChangeAnything_WhenDataIsSame()
+    {
+        var userId = 1;
+        var updateRequest = new UpdateUserRequestDto
+        {
+            Name = "Same Name",
+            Email = "same@example.com",
+            Role = "User"
+        };
+
+        MediatorMock.Setup(m => m.Send(It.IsAny<UpdateUserCommand>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult(Unit.Value));
+
+        var result = await Controller.UpdateUser(userId, updateRequest);
+
+        Assert.IsType<NoContentResult>(result);
+        MediatorMock.Verify(m => m.Send(It.IsAny<UpdateUserCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task UpdateUser_ThrowsValidationException_WhenNameExceedsMaxLength()
+    {
+        var userId = 1;
+        var updateRequest = new UpdateUserRequestDto
+        {
+            Name = new string('A', 256),
+            Email = "updated@example.com",
+            Role = "User"
+        };
+
+        MediatorMock.Setup(m => m.Send(It.IsAny<UpdateUserCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ValidationException("Name cannot exceed 255 characters."));
+
+        var exception = await Assert.ThrowsAsync<ValidationException>(() => Controller.UpdateUser(userId, updateRequest));
+
+        Assert.Equal("Name cannot exceed 255 characters.", exception.Message);
+        MediatorMock.Verify(m => m.Send(It.IsAny<UpdateUserCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task UpdateUser_ThrowsKeyNotFoundException_WhenUpdatingNonExistentUser()
+    {
+        var userId = 999; 
+        var updateRequest = new UpdateUserRequestDto
+        {
+            Name = "Non-existent User",
+            Email = "nonexistent@example.com",
+            Role = "User"
+        };
+
+        MediatorMock.Setup(m => m.Send(It.IsAny<UpdateUserCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new KeyNotFoundException($"User with ID {userId} not found."));
+
+        var exception = await Assert.ThrowsAsync<KeyNotFoundException>(() => Controller.UpdateUser(userId, updateRequest));
+
+        Assert.Equal($"User with ID {userId} not found.", exception.Message);
+        MediatorMock.Verify(m => m.Send(It.IsAny<UpdateUserCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task UpdateUser_ThrowsUnauthorizedAccessException_WhenUpdatingAdminRoleWithoutPermission()
+    {
+        var userId = 1;
+        var updateRequest = new UpdateUserRequestDto
+        {
+            Name = "Updated Name",
+            Email = "updated@example.com",
+            Role = "Admin"
+        };
+
+        MediatorMock.Setup(m => m.Send(It.IsAny<UpdateUserCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UnauthorizedAccessException("Not authorized to assign Admin role."));
+
+        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() => Controller.UpdateUser(userId, updateRequest));
+
+        Assert.Equal("Not authorized to assign Admin role.", exception.Message);
+        MediatorMock.Verify(m => m.Send(It.IsAny<UpdateUserCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

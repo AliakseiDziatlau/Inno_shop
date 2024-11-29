@@ -146,5 +146,23 @@ public class LoginTests : AuthsControllerTestsBase
             Assert.Equal("Invalid email format.", exception.Message);
             MediatorMock.Verify(m => m.Send(requestDto, It.IsAny<CancellationToken>()), Times.Once);
         }
+        
+        [Fact]
+        public async Task Login_ThrowsKeyNotFoundException_WhenAccountIsDeleted()
+        {
+            var requestDto = new LoginCommand
+            {
+                Email = "deleteduser@example.com",
+                Password = "Test@1234"
+            };
+
+            MediatorMock.Setup(m => m.Send(requestDto, It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new KeyNotFoundException("Account has been deleted."));
+
+            var exception = await Assert.ThrowsAsync<KeyNotFoundException>(() => Controller.Login(requestDto));
+
+            Assert.Equal("Account has been deleted.", exception.Message);
+            MediatorMock.Verify(m => m.Send(requestDto, It.IsAny<CancellationToken>()), Times.Once);
+        }
 }
 

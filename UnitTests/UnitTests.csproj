@@ -49,9 +49,4 @@
       <Compile Remove="MockDbSet.cs" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="ProductControl.UnitTests\" />
-      <Folder Include="UserControl.UnitTests\" />
-    </ItemGroup>
-
 </Project>
