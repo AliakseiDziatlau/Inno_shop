@@ -1,0 +1,46 @@
+version: "3.8"
+
+services:
+  user-service:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Test
+      - ConnectionStrings__DefaultConnection=Host=user-db-test;Port=5432;Database=userdbtest;Username=postgres;Password=Alexey200616may
+      - PathToProductService=http://product-service:8080
+    depends_on:
+      - user-db-test
+
+  product-service:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Test
+      - ConnectionStrings__DefaultConnection=Host=product-db-test;Port=5432;Database=productdbtest;Username=postgres;Password=Alexey200616may
+      - PathToUserService=http://user-service:8080
+    depends_on:
+      - product-db-test
+
+  user-db-test:
+    image: postgres:15
+    container_name: user-db-test
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Alexey200616may
+      POSTGRES_DB: userdbtest
+    ports:
+      - "5435:5432"
+    volumes:
+      - user-db-test-data:/var/lib/postgresql/data
+
+  product-db-test:
+    image: postgres:15
+    container_name: product-db-test
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Alexey200616may
+      POSTGRES_DB: productdbtest
+    ports:
+      - "5436:5432"
+    volumes:
+      - product-db-test-data:/var/lib/postgresql/data
+
+volumes:
+  user-db-test-data:
+  product-db-test-data:

@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  user-service:
+    build:
+      context: .
+      dockerfile: UserControl/Dockerfile
+    ports:
+      - "5001:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=user-db;Port=5432;Database=userdb;Username=postgres;Password=Alexey200616may
+      - PathToProductService=http://product-service:8080
+    depends_on:
+      - user-db
+
+  product-service:
+    build:
+      context: .
+      dockerfile: ProductControl/Dockerfile
+    ports:
+      - "5002:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=product-db;Port=5432;Database=productdb;Username=postgres;Password=Alexey200616may
+      - PathToUserService=http://user-service:8080
+    depends_on:
+      - product-db
+
+  user-db:
+    image: postgres:15
+    container_name: user-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Alexey200616may
+      POSTGRES_DB: userdb
+    ports:
+      - "5433:5432" 
+    volumes:
+      - user-db-data:/var/lib/postgresql/data 
+
+  product-db:
+    image: postgres:15
+    container_name: product-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Alexey200616may
+      POSTGRES_DB: productdb
+    ports:
+      - "5434:5432" 
+    volumes:
+      - product-db-data:/var/lib/postgresql/data
+
+volumes:
+  user-db-data:
+  product-db-data:
+networks:
+  default:
+    driver: bridge
