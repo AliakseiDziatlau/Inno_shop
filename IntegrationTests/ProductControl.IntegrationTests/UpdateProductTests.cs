@@ -316,4 +316,227 @@ public class UpdateProductTests : IntegrationTestBase
         responseContent.Should().NotBeNullOrWhiteSpace();
         responseContent.Should().Contain("An error occurred.");
     }
+    
+    [Fact]
+    public async Task UpdateProduct_ShouldReturnValidationError_WhenNameIsEmpty()
+    {
+        /*Test data*/
+        var token = await RegisterAndLoginAsync(new
+        {
+            Name = "Test User",
+            Email = "testuser@example.com",
+            Password = "TestPassword123",
+            Role = "User"
+        });
+
+        using var productClient = CreateNewProductClient();
+        productClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        /*Test data*/
+        var product = new
+        {
+            Name = "Original Product",
+            Description = "Original Description",
+            Price = 50.0,
+            IsAvailable = true
+        };
+
+        var createResponse = await productClient.PostAsJsonAsync("/api/products", product);
+        createResponse.EnsureSuccessStatusCode();
+        var createdProduct = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync()).RootElement;
+        var productId = createdProduct.GetProperty("id").GetInt32();
+
+        /*Test data*/
+        var updateRequest = new
+        {
+            Name = "",
+            Description = "Updated Description",
+            Price = 60.0,
+            IsAvailable = true
+        };
+        
+        var response = await productClient.PutAsJsonAsync($"/api/products/{productId}", updateRequest);
+        
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        responseContent.Should().Contain("Product name is required.");
+    }
+    
+    [Fact]
+    public async Task UpdateProduct_ShouldReturnValidationError_WhenDescriptionExceedsMaxLength()
+    {
+        /*Test data*/
+        var token = await RegisterAndLoginAsync(new
+        {
+            Name = "Test User",
+            Email = "testuser@example.com",
+            Password = "TestPassword123",
+            Role = "User"
+        });
+
+        using var productClient = CreateNewProductClient();
+        productClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        /*Test data*/
+        var product = new
+        {
+            Name = "Original Product",
+            Description = "Original Description",
+            Price = 50.0,
+            IsAvailable = true
+        };
+
+        var createResponse = await productClient.PostAsJsonAsync("/api/products", product);
+        createResponse.EnsureSuccessStatusCode();
+        var createdProduct = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync()).RootElement;
+        var productId = createdProduct.GetProperty("id").GetInt32();
+
+        /*Test data*/
+        var longDescription = new string('a', 501);
+        var updateRequest = new
+        {
+            Name = "Updated Product",
+            Description = longDescription,
+            Price = 60.0,
+            IsAvailable = true
+        };
+        
+        var response = await productClient.PutAsJsonAsync($"/api/products/{productId}", updateRequest);
+        
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        responseContent.Should().Contain("Description must not exceed 500 characters.");
+    }
+    
+    [Fact]
+    public async Task UpdateProduct_ShouldReturnValidationError_WhenPriceIsNegative()
+    {
+        /*Test data*/
+        var token = await RegisterAndLoginAsync(new
+        {
+            Name = "Test User",
+            Email = "testuser@example.com",
+            Password = "TestPassword123",
+            Role = "User"
+        });
+
+        using var productClient = CreateNewProductClient();
+        productClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        /*Test data*/
+        var product = new
+        {
+            Name = "Original Product",
+            Description = "Original Description",
+            Price = 50.0,
+            IsAvailable = true
+        };
+
+        var createResponse = await productClient.PostAsJsonAsync("/api/products", product);
+        createResponse.EnsureSuccessStatusCode();
+        var createdProduct = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync()).RootElement;
+        var productId = createdProduct.GetProperty("id").GetInt32();
+
+        /*Test data*/
+        var updateRequest = new
+        {
+            Name = "Updated Product",
+            Description = "Updated Description",
+            Price = -10.0,
+            IsAvailable = true
+        };
+        
+        var response = await productClient.PutAsJsonAsync($"/api/products/{productId}", updateRequest);
+        
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        responseContent.Should().Contain("Price must be greater or equal than zero.");
+    }
+    
+    [Fact]
+    public async Task UpdateProduct_ShouldReturnValidationError_WhenIsAvailableIsNull()
+    {
+        /*Test data*/
+        var token = await RegisterAndLoginAsync(new
+        {
+            Name = "Test User",
+            Email = "testuser@example.com",
+            Password = "TestPassword123",
+            Role = "User"
+        });
+
+        using var productClient = CreateNewProductClient();
+        productClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        /*Test data*/
+        var product = new
+        {
+            Name = "Original Product",
+            Description = "Original Description",
+            Price = 50.0,
+            IsAvailable = true
+        };
+
+        var createResponse = await productClient.PostAsJsonAsync("/api/products", product);
+        createResponse.EnsureSuccessStatusCode();
+        var createdProduct = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync()).RootElement;
+        var productId = createdProduct.GetProperty("id").GetInt32();
+
+        /*Test data*/
+        var updateRequest = new
+        {
+            Name = "Updated Product",
+            Description = "Updated Description",
+            Price = 60.0,
+            IsAvailable = (bool?)null
+        };
+        
+        var response = await productClient.PutAsJsonAsync($"/api/products/{productId}", updateRequest);
+        
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        responseContent.Should().Contain("The command field is required.");
+    }
+    
+    [Fact]
+    public async Task UpdateProduct_ShouldReturnOk_WhenRequestIsValid()
+    {
+        /*Test data*/
+        var token = await RegisterAndLoginAsync(new
+        {
+            Name = "Test User",
+            Email = "testuser@example.com",
+            Password = "TestPassword123",
+            Role = "User"
+        });
+
+        using var productClient = CreateNewProductClient();
+        productClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        /*Test data*/
+        var product = new
+        {
+            Name = "Original Product",
+            Description = "Original Description",
+            Price = 50.0,
+            IsAvailable = true
+        };
+
+        var createResponse = await productClient.PostAsJsonAsync("/api/products", product);
+        createResponse.EnsureSuccessStatusCode();
+        var createdProduct = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync()).RootElement;
+        var productId = createdProduct.GetProperty("id").GetInt32();
+
+        /*Test data*/
+        var updateRequest = new
+        {
+            Name = "Updated Product",
+            Description = "Updated Description",
+            Price = 60.0,
+            IsAvailable = true
+        };
+        
+        var response = await productClient.PutAsJsonAsync($"/api/products/{productId}", updateRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
 }

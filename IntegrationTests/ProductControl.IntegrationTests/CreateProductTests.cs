@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using ProductControl.Core.Entities;
 using ProductControl.Infrastracture.Persistence;
 
 namespace IntegrationTests.ProductControl.IntegrationTests;
@@ -183,5 +184,164 @@ public class CreateProductTests : IntegrationTestBase
         productResponse.EnsureSuccessStatusCode();
         var responseContent = await productResponse.Content.ReadAsStringAsync();
         responseContent.Should().Contain("Min Price Product");
+    }
+    
+    [Fact]
+    public async Task CreateProduct_ShouldReturnValidationError_WhenNameIsEmpty()
+    {
+        /*Test data*/
+        var token = await RegisterAndLoginAsync(new
+        {
+            Name = "Test User",
+            Email = "testuser@example.com",
+            Password = "TestPassword123",
+            Role = "User"
+        });
+
+        using var productClient = CreateNewProductClient();
+        productClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        /*Test data*/
+        var invalidRequest = new
+        {
+            Name = "",
+            Description = "A valid description",
+            Price = 10.0,
+            IsAvailable = true
+        };
+        
+        var response = await productClient.PostAsJsonAsync("/api/products", invalidRequest);
+        
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        responseContent.Should().Contain("Product name is required.");
+    }
+    
+    [Fact]
+    public async Task CreateProduct_ShouldReturnValidationError_WhenDescriptionIsEmpty()
+    {
+        /*Test data*/
+        var token = await RegisterAndLoginAsync(new
+        {
+            Name = "Test User",
+            Email = "testuser@example.com",
+            Password = "TestPassword123",
+            Role = "User"
+        });
+
+        using var productClient = CreateNewProductClient();
+        productClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        /*Test data*/
+        var invalidRequest = new
+        {
+            Name = "Valid Name",
+            Description = "",
+            Price = 10.0,
+            IsAvailable = true
+        };
+        
+        var response = await productClient.PostAsJsonAsync("/api/products", invalidRequest);
+        
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        responseContent.Should().Contain("Product description is required.");
+    }
+
+    [Fact]
+    public async Task CreateProduct_ShouldReturnValidationError_WhenPriceIsZero()
+    {
+        /*Test data*/
+        var token = await RegisterAndLoginAsync(new
+        {
+            Name = "Test User",
+            Email = "testuser@example.com",
+            Password = "TestPassword123",
+            Role = "User"
+        });
+
+        using var productClient = CreateNewProductClient();
+        productClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        /*Test data*/
+        var invalidRequest = new
+        {
+            Name = "Valid Name",
+            Description = "Valid Description",
+            Price = 0.0,
+            IsAvailable = true
+        };
+        
+        var response = await productClient.PostAsJsonAsync("/api/products", invalidRequest);
+        
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        responseContent.Should().Contain("Price must be greater than zero.");
+    }
+    
+    [Fact]
+    public async Task CreateProduct_ShouldReturnValidationError_WhenIsAvailableIsNull()
+    {
+        /*Test data*/
+        var token = await RegisterAndLoginAsync(new
+        {
+            Name = "Test User",
+            Email = "testuser@example.com",
+            Password = "TestPassword123",
+            Role = "User"
+        });
+
+        using var productClient = CreateNewProductClient();
+        productClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        /*Test data*/
+        var invalidRequest = new
+        {
+            Name = "Valid Name",
+            Description = "Valid Description",
+            Price = 10.0,
+            IsAvailable = (bool?)null
+        };
+        
+        var response = await productClient.PostAsJsonAsync("/api/products", invalidRequest);
+        
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        responseContent.Should().Contain("The command field is required.");
+    }
+    
+    [Fact]
+    public async Task CreateProduct_ShouldCreateProduct_WhenRequestIsValid()
+    {
+        /*Test data*/
+        var token = await RegisterAndLoginAsync(new
+        {
+            Name = "Test User",
+            Email = "testuser@example.com",
+            Password = "TestPassword123",
+            Role = "User"
+        });
+
+        using var productClient = CreateNewProductClient();
+        productClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        /*Test data*/
+        var validRequest = new
+        {
+            Name = "Valid Name",
+            Description = "Valid Description",
+            Price = 10.0,
+            IsAvailable = true
+        };
+        
+        var response = await productClient.PostAsJsonAsync("/api/products", validRequest);
+        
+        response.EnsureSuccessStatusCode();
+        var responseContent = await response.Content.ReadFromJsonAsync<Product>();
+        responseContent.Should().NotBeNull();
+        responseContent.Name.Should().Be(validRequest.Name);
+        responseContent.Description.Should().Be(validRequest.Description);
+        responseContent.Price.Should().Be((decimal)validRequest.Price);
+        responseContent.IsAvailable.Should().Be(validRequest.IsAvailable);
     }
 }

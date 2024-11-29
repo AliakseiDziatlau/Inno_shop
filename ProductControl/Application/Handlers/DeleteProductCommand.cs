@@ -1,23 +1,19 @@
 using MediatR;
-using ProductControl.Application.Commands;
 using ProductControl.Core.Interfaces;
-using ProductControl.Infrastracture.Interfaces;
 namespace ProductControl.Application.Handlers;
 
-public class DeleteProductCommandHandler : IRequestHandler<DeleteProductCommand, Unit>
+public class DeleteProductCommand : ProductHandlerBase, IRequestHandler<Commands.DeleteProductCommand, Unit>
 {
     private readonly IProductRepository _repository;
-    private readonly ITokenService _tokenService;
 
-    public DeleteProductCommandHandler(IProductRepository repository, ITokenService tokenService)
+    public DeleteProductCommand(IProductRepository repository)
     {
         _repository = repository;
-        _tokenService = tokenService;
     }
 
-    public async Task<Unit> Handle(DeleteProductCommand request, CancellationToken cancellationToken)
+    public async Task<Unit> Handle(Commands.DeleteProductCommand request, CancellationToken cancellationToken)
     {
-        var userId = _tokenService.GetUserIdFromToken(request.User);
+        var userId = tokenService.GetUserIdFromToken(request.User);
         var product = await _repository.GetByIdAsync(request.ProductId, userId);
         if (product == null)
         {

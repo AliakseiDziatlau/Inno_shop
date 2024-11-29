@@ -53,7 +53,7 @@ public class RequestPasswordReset : IntegrationTestBase
         /*Test data*/
         var passwordResetRequest = new
         {
-            Email = "nonexistentuser@example.com" //no such email in the DB
+            Email = "nonexistentuser@example.com" /*no such email in the DB*/
         };
 
         using var UserClient = CreateNewUserClient();
@@ -62,5 +62,64 @@ public class RequestPasswordReset : IntegrationTestBase
 
         var responseContent = await passwordResetResponse.Content.ReadAsStringAsync();
         responseContent.Should().Contain("User with the specified email was not found.");
+    }
+    
+    [Fact]
+    public async Task RequestPasswordReset_ShouldReturnBadRequest_WhenEmailIsEmpty()
+    {
+        /*Test data*/
+        var request = new
+        {
+            Email = ""
+        };
+
+        using var userClient = CreateNewUserClient();
+        var response = await userClient.PostAsJsonAsync("/api/auths/request-password-reset", request);
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        var content = await response.Content.ReadAsStringAsync();
+        content.Should().Contain("Email is required.");
+    }
+    
+    [Fact]
+    public async Task RequestPasswordReset_ShouldReturnBadRequest_WhenEmailIsInvalid()
+    {
+        /*Test data*/
+        var request = new
+        {
+            Email = "invalid-email"
+        };
+
+        using var userClient = CreateNewUserClient();
+        var response = await userClient.PostAsJsonAsync("/api/auths/request-password-reset", request);
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        var content = await response.Content.ReadAsStringAsync();
+        content.Should().Contain("Invalid email format.");
+    }
+    
+    [Fact]
+    public async Task RequestPasswordReset_ShouldReturnOk_WhenEmailIsValid()
+    {
+        /*Test data*/
+        var userRegisterRequest = new
+        {
+            Name = "Test User",
+            Email = "validuser@example.com",
+            Password = "TestPassword123",
+            Role = "User"
+        };
+
+        var request = new
+        {
+            Email = userRegisterRequest.Email
+        };
+
+        using var userClient = CreateNewUserClient();
+        var registerResponse = await userClient.PostAsJsonAsync("/api/auths/register", userRegisterRequest);
+        registerResponse.EnsureSuccessStatusCode();
+        await ConfirmEmailAsync(userRegisterRequest.Email);
+        var response = await userClient.PostAsJsonAsync("/api/auths/request-password-reset", request);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadAsStringAsync();
+        content.Should().Contain("Password reset link sent to your email.");
     }
 }

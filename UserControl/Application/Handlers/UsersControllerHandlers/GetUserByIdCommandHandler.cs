@@ -4,14 +4,9 @@ using UserControl.Application.DTOs;
 using UserControl.Application.Interfaces;
 namespace UserControl.Application.Handlers.UsersControllerHandlers;
 
-public class GetUserByIdCommandHandler : IRequestHandler<GetUserByIdCommand, UserDto>
+public class GetUserByIdCommandHandler : UserHandlerBase, IRequestHandler<GetUserByIdCommand, UserDto>
 {
-    private readonly IUserService _userService;
-
-    public GetUserByIdCommandHandler(IUserService userService)
-    {
-        _userService = userService;
-    }
+    public GetUserByIdCommandHandler(IUserService userService) : base(userService) { }
 
     public async Task<UserDto> Handle(GetUserByIdCommand request, CancellationToken cancellationToken)
     {

@@ -1,24 +1,23 @@
 using AutoMapper;
 using MediatR;
-using ProductControl.Application.Commands;
 using ProductControl.Application.DTOs;
 using ProductControl.Core.Entities;
 using ProductControl.Core.Interfaces;
 
 namespace ProductControl.Application.Handlers;
 
-public class CreateProductCommandHandler : BaseHandler, IRequestHandler<CreateProductCommand, ProductDto>
+public class CreateProductCommand : ProductHandlerBase, IRequestHandler<Commands.CreateProductCommand, ProductDto>
 {
     private readonly IProductRepository _repository;
     private readonly IMapper _mapper;
 
-    public CreateProductCommandHandler(IProductRepository repository, IMapper mapper)
+    public CreateProductCommand(IProductRepository repository, IMapper mapper)
     {
         _repository = repository;
         _mapper = mapper;
     }
 
-    public async Task<ProductDto> Handle(CreateProductCommand request, CancellationToken cancellationToken)
+    public async Task<ProductDto> Handle(Commands.CreateProductCommand request, CancellationToken cancellationToken)
     {
         var product = new Product
         {

@@ -59,8 +59,8 @@ public class LoginTests : IntegrationTestBase
         /*Test data*/
         var invalidLoginRequest = new
         {
-            Email = "nonexistentuser@example.com", //no such email in the DB
-            Password = "WrongPassword123"          //no such password in the DB
+            Email = "nonexistentuser@example.com", /*no such email in the DB*/
+            Password = "WrongPassword123"          /*no such password in the DB*/
         };
 
         using var UserClient = CreateNewUserClient();
@@ -195,6 +195,81 @@ public class LoginTests : IntegrationTestBase
         var responseJson = JsonDocument.Parse(responseContent).RootElement;
         responseJson.TryGetProperty("detail", out var detail).Should().BeTrue();
         detail.GetString().Should().Contain("Your account has been deactivated. Please contact support.");
+    }
+    
+    [Fact]
+    public async Task Login_ShouldReturnBadRequest_WhenEmailIsEmpty()
+    {
+        var loginRequest = new
+        {
+            Email = string.Empty,
+            Password = "ValidPassword123"
+        };
+
+        using var userClient = CreateNewUserClient();
+        var response = await userClient.PostAsJsonAsync("/api/auths/login", loginRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        var content = await response.Content.ReadAsStringAsync();
+        content.Should().Contain("Email is required.");
+    }
+    
+    [Fact]
+    public async Task Login_ShouldReturnBadRequest_WhenEmailIsInvalid()
+    {
+        var loginRequest = new
+        {
+            Email = "invalid-email-format",
+            Password = "ValidPassword123"
+        };
+
+        using var userClient = CreateNewUserClient();
+        var response = await userClient.PostAsJsonAsync("/api/auths/login", loginRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        var content = await response.Content.ReadAsStringAsync();
+        content.Should().Contain("Invalid email format.");
+    }
+    
+    [Fact]
+    public async Task Login_ShouldReturnBadRequest_WhenPasswordIsEmpty()
+    {
+        var loginRequest = new
+        {
+            Email = "validuser@example.com",
+            Password = string.Empty
+        };
+
+        using var userClient = CreateNewUserClient();
+        var response = await userClient.PostAsJsonAsync("/api/auths/login", loginRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        var content = await response.Content.ReadAsStringAsync();
+        content.Should().Contain("Password is required.");
+    }
+    
+    [Fact]
+    public async Task Login_ShouldReturnOk_WhenValidCredentialsAreProvided()
+    {
+        var registerRequest = new
+        {
+            Name = "Test User",
+            Email = "testuser@example.com",
+            Password = "ValidPassword123",
+            Role = "User"
+        };
+
+        var loginRequest = new
+        {
+            Email = registerRequest.Email,
+            Password = registerRequest.Password
+        };
+
+        using var userClient = CreateNewUserClient();
+        var registerResponse = await userClient.PostAsJsonAsync("/api/auths/register", registerRequest);
+        registerResponse.EnsureSuccessStatusCode();
+        await ConfirmEmailAsync(registerRequest.Email);
+        var loginResponse = await userClient.PostAsJsonAsync("/api/auths/login", loginRequest);
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await loginResponse.Content.ReadAsStringAsync();
+        content.Should().Contain("token");
     }
     
     private void ValidateJwtToken(string jwtToken)

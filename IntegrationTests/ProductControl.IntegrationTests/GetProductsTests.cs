@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
@@ -93,5 +94,126 @@ public class GetProductsTests : IntegrationTestBase
         var searchByAvailabilityResult = await searchByAvailabilityResponse.Content.ReadFromJsonAsync<List<Product>>();
         searchByAvailabilityResult.Should().NotBeNull();
         searchByAvailabilityResult.Count.Should().Be(2); 
+    }
+    
+    [Fact]
+    public async Task GetProducts_ShouldReturnValidationError_WhenMinPriceIsNegative()
+    {
+        /*Test data*/
+        var token = await RegisterAndLoginAsync(new
+        {
+            Name = "Test User",
+            Email = "testuser@example.com",
+            Password = "TestPassword123",
+            Role = "User"
+        });
+
+        using var productClient = CreateNewProductClient();
+        productClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var invalidFilter = "?minPrice=-1";
+        
+        var response = await productClient.GetAsync($"/api/products{invalidFilter}");
+        
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        responseContent.Should().Contain("Minimum price must be greater than or equal to zero.");
+    }
+    
+    [Fact]
+    public async Task GetProducts_ShouldReturnValidationError_WhenMaxPriceIsNegative()
+    {
+        /*Test data*/
+        var token = await RegisterAndLoginAsync(new
+        {
+            Name = "Test User",
+            Email = "testuser@example.com",
+            Password = "TestPassword123",
+            Role = "User"
+        });
+
+        using var productClient = CreateNewProductClient();
+        productClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var invalidFilter = "?maxPrice=-10";
+        
+        var response = await productClient.GetAsync($"/api/products{invalidFilter}");
+        
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        responseContent.Should().Contain("Maximum price must be greater than or equal to zero.");
+    }
+    
+    [Fact]
+    public async Task GetProducts_ShouldReturnValidationError_WhenMaxPriceIsLessThanMinPrice()
+    {
+        /*Test data*/
+        var token = await RegisterAndLoginAsync(new
+        {
+            Name = "Test User",
+            Email = "testuser@example.com",
+            Password = "TestPassword123",
+            Role = "User"
+        });
+
+        using var productClient = CreateNewProductClient();
+        productClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var invalidFilter = "?minPrice=50&maxPrice=40";
+        
+        var response = await productClient.GetAsync($"/api/products{invalidFilter}");
+        
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        responseContent.Should().Contain("Maximum price must be greater than or equal to minimum price.");
+    }
+    
+    [Fact]
+    public async Task GetProducts_ShouldReturnValidationError_WhenNameExceedsMaxLength()
+    {
+        /*Test data*/
+        var token = await RegisterAndLoginAsync(new
+        {
+            Name = "Test User",
+            Email = "testuser@example.com",
+            Password = "TestPassword123",
+            Role = "User"
+        });
+
+        using var productClient = CreateNewProductClient();
+        productClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var longName = new string('a', 101);
+        var invalidFilter = $"?name={longName}";
+        
+        var response = await productClient.GetAsync($"/api/products{invalidFilter}");
+        
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        responseContent.Should().Contain("Product name must be at most 100 characters.");
+    }
+    
+    [Fact]
+    public async Task GetProducts_ShouldReturnProducts_WhenFilterIsValid()
+    {
+        /*Test data*/
+        var token = await RegisterAndLoginAsync(new
+        {
+            Name = "Test User",
+            Email = "testuser@example.com",
+            Password = "TestPassword123",
+            Role = "User"
+        });
+
+        using var productClient = CreateNewProductClient();
+        productClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var validFilter = "?minPrice=10&maxPrice=100&name=Product";
+        
+        var response = await productClient.GetAsync($"/api/products{validFilter}");
+        
+        response.EnsureSuccessStatusCode();
+        var responseContent = await response.Content.ReadFromJsonAsync<List<Product>>();
+        responseContent.Should().NotBeNull();
     }
 }

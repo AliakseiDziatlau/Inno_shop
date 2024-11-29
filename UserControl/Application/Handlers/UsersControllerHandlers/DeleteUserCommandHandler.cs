@@ -4,14 +4,9 @@ using UserControl.Application.Interfaces;
 
 namespace UserControl.Application.Handlers.UsersControllerHandlers;
 
-public class DeleteUserCommandHandler : IRequestHandler<DeleteUserCommand, Unit>
+public class DeleteUserCommandHandler : UserHandlerBase, IRequestHandler<DeleteUserCommand, Unit>
 {
-    private readonly IUserService _userService;
-
-    public DeleteUserCommandHandler(IUserService userService)
-    {
-        _userService = userService;
-    }
+    public DeleteUserCommandHandler(IUserService userService) : base(userService) { }
 
     public async Task<Unit> Handle(DeleteUserCommand request, CancellationToken cancellationToken)
     {

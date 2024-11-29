@@ -152,4 +152,61 @@ public class DeleteProductTests : IntegrationTestBase
         product.Price.Should().Be((decimal)productCreateRequest.Price);
         product.IsAvailable.Should().Be(productCreateRequest.IsAvailable);
     }
+    
+    [Fact]
+    public async Task DeleteProduct_ShouldReturnNotFound_WhenProductDoesNotExist()
+    {
+        /*Test data*/
+        var userRegisterRequest = new
+        {
+            Name = "Test User",
+            Email = "testuser@example.com",
+            Password = "TestPassword123",
+            Role = "User"
+        };
+
+        using var UserClient = CreateNewUserClient();
+
+        var userRegisterResponse = await UserClient.PostAsJsonAsync("/api/auths/register", userRegisterRequest);
+        userRegisterResponse.EnsureSuccessStatusCode();
+
+        var userConfirmResponse = await UserClient.GetAsync($"/api/auths/confirm-email?token={await GetConfirmationTokenAsync(userRegisterRequest.Email)}");
+        userConfirmResponse.EnsureSuccessStatusCode();
+
+        var userLoginResponse = await UserClient.PostAsJsonAsync("/api/auths/login", new
+        {
+            Email = userRegisterRequest.Email,
+            Password = userRegisterRequest.Password
+        });
+        userLoginResponse.EnsureSuccessStatusCode();
+
+        var userToken = await ExtractJwtToken(userLoginResponse);
+
+        var userProductClient = new HttpClient { BaseAddress = new Uri("http://localhost:5002") };
+        userProductClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", userToken);
+
+        var deleteResponse = await userProductClient.DeleteAsync($"/api/products/99999");
+        deleteResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.InternalServerError);
+    }
+    
+    [Fact]
+    public async Task DeleteProduct_ShouldReturnUnauthorized_WhenTokenIsInvalid()
+    {
+        /*Test data*/
+        var productCreateRequest = new
+        {
+            Name = "Test Product",
+            Description = "A test product",
+            Price = 100.0,
+            IsAvailable = true
+        };
+
+        var invalidToken = "InvalidToken";
+
+        var client = new HttpClient { BaseAddress = new Uri("http://localhost:5002") };
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", invalidToken);
+
+        var deleteResponse = await client.DeleteAsync("/api/products/1");
+        deleteResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
+    }
 } 

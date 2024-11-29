@@ -2,17 +2,11 @@ using MediatR;
 using UserControl.Application.Commands.AuthsControllerCommands;
 using UserControl.Application.DTOs;
 using UserControl.Application.Interfaces;
-
 namespace UserControl.Application.Handlers.AuthsControllerHandlers;
 
-public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Unit>
+public class RegisterCommandHandler : AuthHandlerBase, IRequestHandler<RegisterCommand, Unit>
 {
-    private readonly IAuthService _authService;
-
-    public RegisterCommandHandler(IAuthService authService)
-    {
-        _authService = authService;
-    }
+    public RegisterCommandHandler(IAuthService authService) : base(authService) { }
 
     public async Task<Unit> Handle(RegisterCommand request, CancellationToken cancellationToken)
     {

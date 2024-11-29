@@ -3,7 +3,7 @@ using ProductControl.Infrastracture.Services;
 
 namespace ProductControl.Application.Handlers;
 
-public class BaseHandler
+public class ProductHandlerBase
 {
     public ITokenService tokenService = new TokenService();
 }

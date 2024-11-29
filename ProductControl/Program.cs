@@ -17,6 +17,8 @@ using ProductControl.Infrastracture.Middleware;
 using ProductControl.Infrastracture.Persistence;
 using ProductControl.Infrastracture.Repositories;
 using ProductControl.Infrastracture.Services;
+using CreateProductCommand = ProductControl.Application.Commands.CreateProductCommand;
+using GetProductByIdCommand = ProductControl.Application.Handlers.GetProductByIdCommand;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,7 +29,7 @@ builder.Services.AddControllers()
     });
 
 builder.Services.AddValidatorsFromAssembly(typeof(CreateProductCommand).Assembly);
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(GetProductByIdCommandHandler).Assembly)); 
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(GetProductByIdCommand).Assembly)); 
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
 var environment = builder.Environment.EnvironmentName;

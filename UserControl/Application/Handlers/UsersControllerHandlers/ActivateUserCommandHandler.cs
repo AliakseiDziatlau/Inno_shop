@@ -4,15 +4,10 @@ using UserControl.Application.Interfaces;
 
 namespace UserControl.Application.Handlers.UsersControllerHandlers;
 
-public class ActivateUserCommandHandler : IRequestHandler<ActivateUserCommand, Unit>
+public class ActivateUserCommandHandler : UserHandlerBase, IRequestHandler<ActivateUserCommand, Unit>
 {
-    private readonly IUserService _userService;
-
-    public ActivateUserCommandHandler(IUserService userService)
-    {
-        _userService = userService;
-    }
-
+    public ActivateUserCommandHandler(IUserService userService) : base(userService) { }
+    
     public async Task<Unit> Handle(ActivateUserCommand request, CancellationToken cancellationToken)
     {
         await _userService.ActivateUserAsync(request.UserId);

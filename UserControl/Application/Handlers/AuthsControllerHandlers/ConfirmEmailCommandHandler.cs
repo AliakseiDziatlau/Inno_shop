@@ -3,14 +3,9 @@ using UserControl.Application.Commands.AuthsControllerCommands;
 using UserControl.Application.Interfaces;
 namespace UserControl.Application.Handlers.AuthsControllerHandlers;
 
-public class ConfirmEmailCommandHandler : IRequestHandler<ConfirmEmailCommand, Unit>
+public class ConfirmEmailCommandHandler : AuthHandlerBase, IRequestHandler<ConfirmEmailCommand, Unit>
 {
-    private readonly IAuthService _authService;
-
-    public ConfirmEmailCommandHandler(IAuthService authService)
-    {
-        _authService = authService;
-    }
+    public ConfirmEmailCommandHandler(IAuthService authService) : base(authService) { }
 
     public async Task<Unit> Handle(ConfirmEmailCommand request, CancellationToken cancellationToken)
     {

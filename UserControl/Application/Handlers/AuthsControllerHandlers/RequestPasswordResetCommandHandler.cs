@@ -4,14 +4,9 @@ using UserControl.Application.DTOs;
 using UserControl.Application.Interfaces;
 namespace UserControl.Application.Handlers.AuthsControllerHandlers;
 
-public class RequestPasswordResetCommandHandler : IRequestHandler<RequestPasswordResetCommand, Unit>
+public class RequestPasswordResetCommandHandler : AuthHandlerBase, IRequestHandler<RequestPasswordResetCommand, Unit>
 {
-    private readonly IAuthService _authService;
-
-    public RequestPasswordResetCommandHandler(IAuthService authService)
-    {
-        _authService = authService;
-    }
+    public RequestPasswordResetCommandHandler(IAuthService authService) : base(authService) { }
 
     public async Task<Unit> Handle(RequestPasswordResetCommand request, CancellationToken cancellationToken)
     {

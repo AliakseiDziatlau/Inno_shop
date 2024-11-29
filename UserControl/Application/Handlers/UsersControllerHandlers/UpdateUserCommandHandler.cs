@@ -4,14 +4,9 @@ using UserControl.Application.DTOs;
 using UserControl.Application.Interfaces;
 namespace UserControl.Application.Handlers.UsersControllerHandlers;
 
-public class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand, Unit>
+public class UpdateUserCommandHandler : UserHandlerBase, IRequestHandler<UpdateUserCommand, Unit>
 {
-    private readonly IUserService _userService;
-
-    public UpdateUserCommandHandler(IUserService userService)
-    {
-        _userService = userService;
-    }
+    public UpdateUserCommandHandler(IUserService userService) : base(userService) { }
 
     public async Task<Unit> Handle(UpdateUserCommand request, CancellationToken cancellationToken)
     {

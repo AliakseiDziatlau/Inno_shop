@@ -4,14 +4,9 @@ using UserControl.Application.Interfaces;
 
 namespace UserControl.Application.Handlers.UsersControllerHandlers;
 
-public class DeactivateUserCommandHandler : IRequestHandler<DeactivateUserCommand, Unit>
+public class DeactivateUserCommandHandler : UserHandlerBase, IRequestHandler<DeactivateUserCommand, Unit>
 {
-    private readonly IUserService _userService;
-
-    public DeactivateUserCommandHandler(IUserService userService)
-    {
-        _userService = userService;
-    }
+    public DeactivateUserCommandHandler(IUserService userService) : base(userService) { }
 
     public async Task<Unit> Handle(DeactivateUserCommand request, CancellationToken cancellationToken)
     {
