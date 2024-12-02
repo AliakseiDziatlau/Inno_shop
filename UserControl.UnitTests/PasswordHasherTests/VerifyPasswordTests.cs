@@ -2,7 +2,7 @@ using FluentAssertions;
 
 namespace UserControl.UnitTests.PasswordHasherTests;
 
-public class VerifyPasswordTests : global::UserControl.UnitTests.PasswordHasherTests.PasswordHasherTests
+public class VerifyPasswordTests : PasswordHasherTests
 {
     [Fact]
     public void VerifyPassword_ShouldReturnTrueForValidPassword()
@@ -10,7 +10,7 @@ public class VerifyPasswordTests : global::UserControl.UnitTests.PasswordHasherT
         var password = "Test@123";
         var hashedPassword = _passwordHasher.HashPassword(password);
         var result = _passwordHasher.VerifyPassword(password, hashedPassword);
-        result.Should().BeTrue();
+        Assert.True(result, "The password should be verified successfully.");
     }
 
     [Fact]
@@ -19,7 +19,7 @@ public class VerifyPasswordTests : global::UserControl.UnitTests.PasswordHasherT
         var password = "Test@123";
         var hashedPassword = _passwordHasher.HashPassword(password);
         var result = _passwordHasher.VerifyPassword("WrongPassword", hashedPassword);
-        result.Should().BeFalse();
+        Assert.False(result, "The password verification should fail for an invalid password.");
     }
     
     [Fact]
@@ -28,6 +28,6 @@ public class VerifyPasswordTests : global::UserControl.UnitTests.PasswordHasherT
         var password = "Test@123";
         var hashedPassword = _passwordHasher.HashPassword(password);
         var result = _passwordHasher.VerifyPassword(string.Empty, hashedPassword);
-        result.Should().BeFalse();
+        Assert.False(result, "The password verification should fail for an empty password.");
     }
 }

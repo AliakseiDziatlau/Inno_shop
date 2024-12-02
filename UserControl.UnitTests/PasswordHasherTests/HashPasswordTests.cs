@@ -9,43 +9,42 @@ public class HashPasswordTests : PasswordHasherTests
     {
         var password = "Test@123";
         var hashedPassword = _passwordHasher.HashPassword(password);
-        hashedPassword.Should().NotBeNullOrWhiteSpace();
-        hashedPassword.Should().NotBe(password); 
+        Assert.False(string.IsNullOrWhiteSpace(hashedPassword), "The hashed password should not be null or whitespace.");
+        Assert.NotEqual(password, hashedPassword);
     }
-    
+
     [Fact]
     public void HashPassword_ShouldGenerateDifferentHashesForSamePassword()
     {
         var password = "Test@123";
         var hashedPassword1 = _passwordHasher.HashPassword(password);
         var hashedPassword2 = _passwordHasher.HashPassword(password);
-        hashedPassword1.Should().NotBe(hashedPassword2);
+        Assert.NotEqual(hashedPassword1, hashedPassword2);
     }
-    
+
     [Fact]
     public void HashPassword_ShouldGenerateHashForEmptyPassword()
     {
         var password = string.Empty;
         var hashedPassword = _passwordHasher.HashPassword(password);
-        hashedPassword.Should().NotBeNullOrWhiteSpace();
+        Assert.False(string.IsNullOrWhiteSpace(hashedPassword), "The hashed password for an empty string should not be null or whitespace.");
     }
-    
+
     [Fact]
     public void HashPassword_ShouldThrowExceptionForNullPassword()
     {
         string? password = null;
-        Action action = () => _passwordHasher.HashPassword(password!);
-        action.Should().Throw<ArgumentNullException>();
+        Assert.Throws<ArgumentNullException>(() => _passwordHasher.HashPassword(password!));
     }
-    
+
     [Fact]
     public void HashPassword_ShouldGenerateHashOfExpectedLength()
     {
         var password = "Test@123";
         var hashedPassword = _passwordHasher.HashPassword(password);
-        hashedPassword.Length.Should().BeGreaterOrEqualTo(60);
+        Assert.True(hashedPassword.Length >= 60, "The length of the hashed password should be at least 60 characters.");
     }
-    
+
     [Fact]
     public void HashPassword_ShouldTakeReasonableTime()
     {
@@ -53,6 +52,6 @@ public class HashPasswordTests : PasswordHasherTests
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         _passwordHasher.HashPassword(password);
         stopwatch.Stop();
-        stopwatch.ElapsedMilliseconds.Should().BeLessThan(500); 
+        Assert.True(stopwatch.ElapsedMilliseconds < 500, "Hashing the password should take less than 500 milliseconds.");
     }
 }
